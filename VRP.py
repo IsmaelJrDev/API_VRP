@@ -1,6 +1,7 @@
 import math
 from operator import itemgetter
 
+# FUNCIONES AUXILIARES
 def distancia(coord1, coord2):
     lat1 = coord1[0]
     lon1 = coord1[1]
@@ -29,10 +30,15 @@ def distancia_ruta(ruta):
     return total
 
 def consumo_gasolina(distancia):
-    # Suponiendo un consumo de 10 km por litro (puede ajustarse)
     return distancia / 10
 
-# INICIO DE LA FUNCIÓN VRP
+def volumen_ruta(ruta):
+    total_volumen = 0
+    for c in ruta:
+        total_volumen += volumen_paquetes[c]
+    return total_volumen
+
+# Funcion de VRP
 def vrp_voraz():
     # Calcular los ahorros
     s = {}
@@ -59,7 +65,8 @@ def vrp_voraz():
             nueva_ruta = [k[0], k[1]]
             if (peso_ruta(nueva_ruta) <= max_carga and 
                 distancia_ruta(nueva_ruta) <= max_distancia and
-                consumo_gasolina(distancia_ruta(nueva_ruta)) <= max_gasolina):
+                consumo_gasolina(distancia_ruta(nueva_ruta)) <= max_gasolina and
+                volumen_ruta(nueva_ruta) <= max_volumen):  # Restricción de volumen
                 rutas.append(nueva_ruta)
                 
         elif rc1 != None and rc2 == None:
@@ -73,7 +80,8 @@ def vrp_voraz():
                 
             if (peso_ruta(nueva_ruta) <= max_carga and 
                 distancia_ruta(nueva_ruta) <= max_distancia and
-                consumo_gasolina(distancia_ruta(nueva_ruta)) <= max_gasolina):
+                consumo_gasolina(distancia_ruta(nueva_ruta)) <= max_gasolina and
+                volumen_ruta(nueva_ruta) <= max_volumen):  # Restricción de volumen
                 rutas[rutas.index(rc1)] = nueva_ruta
                 
         elif rc1 == None and rc2 != None:
@@ -87,7 +95,8 @@ def vrp_voraz():
                 
             if (peso_ruta(nueva_ruta) <= max_carga and 
                 distancia_ruta(nueva_ruta) <= max_distancia and
-                consumo_gasolina(distancia_ruta(nueva_ruta)) <= max_gasolina):
+                consumo_gasolina(distancia_ruta(nueva_ruta)) <= max_gasolina and
+                volumen_ruta(nueva_ruta) <= max_volumen):  # Restricción de volumen
                 rutas[rutas.index(rc2)] = nueva_ruta
                 
         elif rc1 != None and rc2 != None and rc1 != rc2:
@@ -101,7 +110,8 @@ def vrp_voraz():
                 
             if (peso_ruta(nueva_ruta) <= max_carga and 
                 distancia_ruta(nueva_ruta) <= max_distancia and
-                consumo_gasolina(distancia_ruta(nueva_ruta)) <= max_gasolina):
+                consumo_gasolina(distancia_ruta(nueva_ruta)) <= max_gasolina and
+                volumen_ruta(nueva_ruta) <= max_volumen):  # Restricción de volumen
                 rutas.remove(rc1)
                 rutas.remove(rc2)
                 rutas.append(nueva_ruta)
@@ -120,6 +130,7 @@ if __name__ == "__main__":
         'MICH': (19.702614895389996, -101.19228631929688),
         'SON': (29.075273188617818, -110.95962477655333)
     }
+
     pedidos = {
         'EDO.MEX': 10,
         'QRO': 13,
@@ -132,10 +143,25 @@ if __name__ == "__main__":
         'SON': 8
     }
 
+    # Volumen de los paquetes por ciudad (en m³)
+    volumen_paquetes = {
+        'EDO.MEX': 2,
+        'QRO': 3,
+        'CDMX': 1.5,
+        'SLP': 2.5,
+        'MTY': 4,
+        'PUE': 2,
+        'GDL': 1.8,
+        'MICH': 2.2,
+        'SON': 3.5
+    }
+
     almacen = (19.432854452264177, -99.13330004822943)
     max_carga = 40
-    max_distancia = 5  # Nueva dimensión: distancia máxima por ruta (en unidades de distancia)
-    max_gasolina = 12  # Nueva dimensión: máximo de litros de gasolina por ruta
+    max_distancia = 5   # Nueva dimensión: distancia máxima por ruta (en unidades de distancia)
+    max_gasolina = 12   # Nueva dimensión: máximo de litros de gasolina por ruta
+    max_volumen = 10    # Capacidad volumétrica máxima (en m³)
+
 
     rutas = vrp_voraz()
     
@@ -149,6 +175,3 @@ if __name__ == "__main__":
         print(f"  - Consumo gasolina: {gas:.2f}L/{max_gasolina} Lts\n")
 
 # Datos a tomar en cuenta para la api. Tiene que pedir como datos de entrada la ciudad de origen ( en donde se encuentra el almacen) y la ciudad de destino, el maximo de paquetes que se pueden llevar y el maximo de distancia que se puede recorrer y el maximo de gasolina que se puede consumir, todo esto dentro de un viaje.
-
-# TODO: Agregar dos dimensiónes más (distancia, caseta, hrs trabajadas, etc) en API
-# donde estas, done esta tu almacen, etc.
