@@ -2,69 +2,130 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>VRP - Rutas Óptimas</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API VRP - Ruteo de Vehículos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        #map { height: 400px; }
+    </style>
 </head>
 <body class="bg-light">
-<div class="container py-5">
-    <h2 class="mb-4">Optimización de Rutas (VRP)</h2>
+    <div class="container py-5">
+        <div class="text-center mb-5">
+            <h1 class="display-5 fw-bold">Calculadora de Rutas VRP</h1>
+            <p class="lead text-muted">Completa el formulario para obtener la mejor ruta de entrega.</p>
+        </div>
 
-    <form method="POST" class="row g-3 bg-white p-4 rounded shadow-sm">
-        <div class="col-md-6">
-            <label class="form-label">Ciudad de Origen</label>
-            <select name="ciudad_origen" class="form-select" required>
-                {% for ciudad in ciudades %}
-                    <option value="{{ ciudad }}">{{ ciudad }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="col-md-6">
-            <label class="form-label">Ciudad de Destino</label>
-            <select name="ciudad_destino" class="form-select" required>
-                {% for ciudad in ciudades %}
-                    <option value="{{ ciudad }}">{{ ciudad }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="col-md-4">
-            <label class="form-label">Máx. paquetes</label>
-            <input type="number" name="max_carga" class="form-control" required>
-        </div>
-        <div class="col-md-4">
-            <label class="form-label">Máx. distancia</label>
-            <input type="number" step="0.1" name="max_distancia" class="form-control" required>
-        </div>
-        <div class="col-md-4">
-            <label class="form-label">Máx. gasolina (L)</label>
-            <input type="number" step="0.1" name="max_gasolina" class="form-control" required>
-        </div>
-        <div class="col-md-6">
-            <label class="form-label">Máx. volumen (m³)</label>
-            <input type="number" step="0.1" name="max_volumen" class="form-control" required>
-        </div>
-        <div class="col-12">
-            <button class="btn btn-primary">Calcular Rutas</button>
-        </div>
-    </form>
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4">Formulario de Datos</h4>
+                        <form id="vrp-form">
+                            <div class="mb-3">
+                                <label for="ciudad_origen" class="form-label">Ciudad de Origen (almacén)</label>
+                                <select class="form-select" id="ciudad_origen" required></select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="ciudad_destino" class="form-label">Ciudad de Destino</label>
+                                <select class="form-select" id="ciudad_destino" required></select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="pedidos" class="form-label">Máximo de Paquetes</label>
+                                <input type="number" class="form-control" id="pedidos" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="distancia_maxima" class="form-label">Máxima Distancia (km)</label>
+                                <input type="number" step="0.1" class="form-control" id="distancia_maxima" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="gasolina" class="form-label">Máximo de Gasolina (L)</label>
+                                <input type="number" step="0.1" class="form-control" id="gasolina" required>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">Calcular Ruta</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
 
-    {% if error %}
-        <div class="alert alert-danger mt-4">{{ error }}</div>
-    {% endif %}
+                <div class="card shadow-sm mt-4">
+                    <div class="card-body" id="resultado"></div>
+                </div>
+            </div>
 
-    {% if rutas_info %}
-        <h4 class="mt-5">Rutas Generadas</h4>
-        <ul class="list-group mt-3">
-            {% for ruta in rutas_info %}
-                <li class="list-group-item">
-                    <strong>Ruta:</strong> {{ ruta.ruta }} <br>
-                    <strong>Peso:</strong> {{ ruta.peso_total }} paquetes |
-                    <strong>Distancia:</strong> {{ ruta.distancia_total }} km |
-                    <strong>Gasolina:</strong> {{ ruta.gasolina_total }} L |
-                    <strong>Volumen:</strong> {{ ruta.volumen_total }} m³
-                </li>
-            {% endfor %}
-        </ul>
-    {% endif %}
-</div>
+            <div class="col-lg-6">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h4 class="card-title mb-3">Ruta en el Mapa</h4>
+                        <div id="map" class="rounded shadow-sm"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <script>
+        const ciudades = ["EDO.MEX","QRO","CDMX","SLP","MTY","PUE","GDL","MICH","SON"];
+        const origenSel = document.getElementById('ciudad_origen');
+        const destinoSel = document.getElementById('ciudad_destino');
+
+        ciudades.forEach(c => {
+            origenSel.innerHTML += `<option value="${c}">${c}</option>`;
+            destinoSel.innerHTML += `<option value="${c}">${c}</option>`;
+        });
+
+        document.getElementById('vrp-form').addEventListener('submit', async e => {
+            e.preventDefault();
+            const data = {
+                ciudad_origen: origenSel.value,
+                ciudad_destino: destinoSel.value,
+                pedidos: document.getElementById('pedidos').value,
+                distancia_maxima: document.getElementById('distancia_maxima').value,
+                gasolina: document.getElementById('gasolina').value
+            };
+            const res = await fetch('/api/vrp', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify(data)
+            });
+            const json = await res.json();
+            let html;
+            if(res.ok){
+                html = `
+                    <h5 class="card-title">Resultados:</h5>
+                    <ul class="list-group list-group-flush">
+                      <li class="list-group-item">Distancia Total: <strong>${json.distancia_km} km</strong></li>
+                      <li class="list-group-item">Gasolina Necesaria: <strong>${json.gasolina_necesaria_l} L</strong></li>
+                      <li class="list-group-item">Pedidos Máximos Posibles: <strong>${json.pedidos_maximos_posibles}</strong></li>
+                    </ul>`;
+                mostrarRutaEnMapa(json.ruta || [data.ciudad_origen, data.ciudad_destino]);
+            } else {
+                html = `<div class="alert alert-danger">${json.error || json.motivo}</div>`;
+            }
+            document.getElementById('resultado').innerHTML = html;
+        });
+
+        function mostrarRutaEnMapa(ruta){
+            const m = L.map('map').setView([19.4326,-99.1332],6);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(m);
+            const coords = {
+                "EDO.MEX":[19.2938,-99.6536],"QRO":[20.5935,-100.3900],"CDMX":[19.4329,-99.1333],
+                "SLP":[22.1517,-100.9766],"MTY":[25.6732,-100.2974],"PUE":[19.0635,-98.3073],
+                "GDL":[20.6771,-103.3469],"MICH":[19.7026,-101.1923],"SON":[29.0753,-110.9596]
+            };
+            const latlngs = ruta.map(c => coords[c]);
+            latlngs.forEach((p,i) => {
+                L.marker(p).addTo(m).bindPopup(i===0?`<b>Origen: ${ruta[0]}</b>`:`<b>${i===latlngs.length-1?'Destino':'Paso'}: ${ruta[i]}</b>`);
+            });
+            L.polyline(latlngs, {color:'blue'}).addTo(m);
+        }
+    </script>
 </body>
 </html>
