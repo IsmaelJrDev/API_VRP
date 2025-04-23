@@ -2,74 +2,69 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Búsqueda de Ruta</title>
-    <!-- Bootstrap CSS -->
+    <title>VRP - Rutas Óptimas</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
-    <div class="container mt-5">
-        <h1 class="text-center mb-4">Búsqueda de Ruta</h1>
-        <form action="/buscar_ruta" method="POST">
-            <!-- Selección de ciudades -->
-            <div class="mb-3">
-                <label for="ciudad_origen" class="form-label">Ciudad de Origen</label>
-                <select class="form-select" id="ciudad_origen" name="ciudad_origen" required>
-                    <option value="" disabled selected>Seleccione una ciudad</option>
-                    <option value="EDO.MEX">EDO.MEX</option>
-                    <option value="QRO">QRO</option>
-                    <option value="CDMX">CDMX</option>
-                    <option value="SLP">SLP</option>
-                    <option value="MTY">MTY</option>
-                    <option value="PUE">PUE</option>
-                    <option value="GDL">GDL</option>
-                    <option value="MICH">MICH</option>
-                    <option value="SON">SON</option>
-                </select>
-            </div>
-            <div class="mb-3">
-                <label for="ciudad_destino" class="form-label">Ciudad de Destino</label>
-                <select class="form-select" id="ciudad_destino" name="ciudad_destino" required>
-                    <option value="" disabled selected>Seleccione una ciudad</option>
-                    <option value="EDO.MEX">EDO.MEX</option>
-                    <option value="QRO">QRO</option>
-                    <option value="CDMX">CDMX</option>
-                    <option value="SLP">SLP</option>
-                    <option value="MTY">MTY</option>
-                    <option value="PUE">PUE</option>
-                    <option value="GDL">GDL</option>
-                    <option value="MICH">MICH</option>
-                    <option value="SON">SON</option>
-                </select>
-            </div>
-            <!-- Máximo de carga -->
-            <div class="mb-3">
-                <label for="max_carga" class="form-label">Máximo de Carga (kg)</label>
-                <input type="number" class="form-control" id="max_carga" name="max_carga" min="1" required>
-            </div>
-            <!-- Distancia máxima -->
-            <div class="mb-3">
-                <label for="max_distancia" class="form-label">Distancia Máxima (km)</label>
-                <input type="number" class="form-control" id="max_distancia" name="max_distancia" min="1" required>
-            </div>
-            <!-- Gasolina máxima -->
-            <div class="mb-3">
-                <label for="max_gasolina" class="form-label">Gasolina Máxima (litros)</label>
-                <input type="number" class="form-control" id="max_gasolina" name="max_gasolina" min="1" required>
-            </div>
-            <!-- Volumen máximo -->
-            <div class="mb-3">
-                <label for="max_volumen" class="form-label">Volumen Máximo (m³)</label>
-                <input type="number" class="form-control" id="max_volumen" name="max_volumen" min="1" required>
-            </div>
-            <!-- Botón de envío -->
-            <div class="text-center">
-                <button type="submit" class="btn btn-primary">Buscar Ruta</button>
-            </div>
-        </form>
-    </div>
+<body class="bg-light">
+<div class="container py-5">
+    <h2 class="mb-4">Optimización de Rutas (VRP)</h2>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <form method="POST" class="row g-3 bg-white p-4 rounded shadow-sm">
+        <div class="col-md-6">
+            <label class="form-label">Ciudad de Origen</label>
+            <select name="ciudad_origen" class="form-select" required>
+                {% for ciudad in ciudades %}
+                    <option value="{{ ciudad }}">{{ ciudad }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Ciudad de Destino</label>
+            <select name="ciudad_destino" class="form-select" required>
+                {% for ciudad in ciudades %}
+                    <option value="{{ ciudad }}">{{ ciudad }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Máx. paquetes</label>
+            <input type="number" name="max_carga" class="form-control" required>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Máx. distancia</label>
+            <input type="number" step="0.1" name="max_distancia" class="form-control" required>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Máx. gasolina (L)</label>
+            <input type="number" step="0.1" name="max_gasolina" class="form-control" required>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Máx. volumen (m³)</label>
+            <input type="number" step="0.1" name="max_volumen" class="form-control" required>
+        </div>
+        <div class="col-12">
+            <button class="btn btn-primary">Calcular Rutas</button>
+        </div>
+    </form>
+
+    {% if error %}
+        <div class="alert alert-danger mt-4">{{ error }}</div>
+    {% endif %}
+
+    {% if rutas_info %}
+        <h4 class="mt-5">Rutas Generadas</h4>
+        <ul class="list-group mt-3">
+            {% for ruta in rutas_info %}
+                <li class="list-group-item">
+                    <strong>Ruta:</strong> {{ ruta.ruta }} <br>
+                    <strong>Peso:</strong> {{ ruta.peso_total }} paquetes |
+                    <strong>Distancia:</strong> {{ ruta.distancia_total }} km |
+                    <strong>Gasolina:</strong> {{ ruta.gasolina_total }} L |
+                    <strong>Volumen:</strong> {{ ruta.volumen_total }} m³
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</div>
 </body>
 </html>
